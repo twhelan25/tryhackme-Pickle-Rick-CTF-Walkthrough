@@ -16,3 +16,5 @@ $ip: This calls the variable storing the target IP.
 -oN nmap.txt: this stores the output of the scan in a normal format to nmap.txt
 
 ![nmap_result](https://github.com/user-attachments/assets/737586aa-2213-453e-90af-a0da1e937a7e)
+This reveals two open ports, open ssh on 22 and an http web server on 80. Let's see what we can find on the browser. When we view the page source code, the username is revealed:
+![pagesource](https://github.com/user-attachments/assets/a7e04774-c2b6-4594-9e8c-b82db000b0d1)

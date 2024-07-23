@@ -1,5 +1,8 @@
 # tryhackme-Pickle-Rick-CTF-Walkthrough
 This is a detailed walkthrough for the CTF Pickle Rick on tryhackme.com.
+
+Scanning and enumeration
+
 First off, let's export the target IP as a variable.
 Command: export ip=10.10.94.118
 Next, let's run an nmap scan against the target.

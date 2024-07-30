@@ -1,3 +1,6 @@
+
+![intro](https://github.com/user-attachments/assets/11ecb6f3-2862-462f-8227-3c6dd2b1a19b)
+
 This is a detailed walkthrough of the tryhackme CTF titled Pickle Rick: This Rick and Morty-themed CTF revolves around exploiting a vulnerable web server to find three ingredients to transform Rick from a pickle back to human state. This walkthrough is intended to be used as a guide so no actaul flags or "answers" will be revealed. 
 
 ## Scanning
